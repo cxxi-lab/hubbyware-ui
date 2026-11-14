@@ -1,0 +1,78 @@
+/*
+ * The design tokens and custom utilities, shared by the app (index.css) and every module
+ * (modules/<id>/module.css, through @reference: nothing is emitted twice). The tokens are static:
+ * the app emits them all as variables, so a module's utilities find the ones the app itself does
+ * not use.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@plugin 'tailwind-scrollbar';
+
+@theme static {
+	--font-display: "Merriweather Sans";
+	--font-accent: "Sofia";
+
+	--color-*: initial;
+
+	--color-white: #fff;
+	--color-black: #000;
+	--color-black-overlay: oklch(18.09% 0.0052 248.12 / 60%);
+
+	--color-steel-100: oklch(68.29% 0.0292 249.97);
+	--color-steel-300: oklch(60.6% 0.0339 249.89);
+	--color-steel-500: oklch(47.78% 0.0336 254.43);
+	--color-steel-700: oklch(34.97% 0.0333 258.98);
+	--color-steel-800: oklch(27.58% 0.0142 261.69);
+	--color-steel-900: oklch(24.26% 0.0105 260.69);
+	--color-steel-950: oklch(24.54% 0.0096 248.22);
+	/* the darkest chrome: the status bar along the bottom */
+	--color-steel-1000: oklch(16% 0.01 255);
+
+	/*
+	 * Clickable surfaces (cards, buttons): a hairline shadow at rest; on hover, a steel outline and a
+	 * lift; focused from the keyboard, a primary outline.
+	 */
+	--shadow-raised: 0 0 0 1px #00000000, 0 1px 1px #03040480, 0 0 1px #03040480;
+	--shadow-raised-hover: 0 0 0 1px #39424a, 0 8px 12px #0304045c, 0 0 1px 1px #03040480;
+	--shadow-raised-focus: 0 0 0 1px var(--color-primary-500), 0 8px 12px #0304045c;
+
+	--color-primary-300: oklch(77.48% 0.1158 256.78);
+	--color-primary-500: oklch(69.57% 0.1612 257.18);
+	--color-primary-700: oklch(28.69% 0.0455 257.84);
+
+	--color-red-100: oklch(78.26% 0.1224 24.48);
+	--color-red-300: oklch(68% 0.2092 24.48);
+	--color-red-500: oklch(61.84% 0.1924 28.13);
+
+	--color-product-blue: oklch(64.69% 0.1902 257.72);
+	--color-product-red: var(--color-red-500);
+	--color-product-purple: oklch(65.49% 0.1527 288.9);
+	--color-product-yellow: oklch(86% 0.1524 91.88);
+	--color-product-lightblue: oklch(71.56% 0.1125 223.84);
+	--color-product-green: oklch(59.57% 0.1242 160.19);
+	--color-product-pink: oklch(72% 0.18 5);
+	--color-product-orange: oklch(70% 0.17 50);
+}
+
+@utility pretty-scrollbar {
+	@apply scrollbar-thin scrollbar-thumb-steel-700 scrollbar-track-steel-800 overflow-y-auto;
+}
+
+@utility brand-gradient {
+	background: linear-gradient(0deg, var(--color-primary-300), var(--color-primary-500));
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	color: transparent;
+}
+
+@utility shadow {
+	box-shadow: 0px 0px 0px 1px #00000000, 0px 1px 1px #03040480, 0px 0px 1px #03040480;
+}
+
+@utility shadow-hovered {
+	box-shadow: rgb(57, 66, 74) 0px 0px 0px 1px, rgba(3, 4, 4, 0.36) 0px 8px 12px, rgba(3, 4, 4, 0.5) 0px 0px 1px 1px;
+}
+
+@utility shadow-out {
+	box-shadow: rgba(3, 4, 4, 0.36) 0px 8px 12px;
+}

@@ -1,0 +1,1 @@
+export { TableHeadGroup } from './TableHeadGroup'

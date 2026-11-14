@@ -1,0 +1,35 @@
+name: publish
+
+# Each package whose version is not on npm yet, published with provenance (npm trusted publishing:
+# no token, this workflow is the package's trusted publisher on npmjs.com).
+on:
+  push:
+    branches: [main]
+    paths: ['packages/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+      - name: Publish the new versions
+        run: |
+          for dir in packages/*/; do
+            name=$(node -p "require('./${dir}package.json').name")
+            version=$(node -p "require('./${dir}package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version: already published"
+            else
+              (cd "$dir" && npm publish --provenance --access public)
+            fi
+          done

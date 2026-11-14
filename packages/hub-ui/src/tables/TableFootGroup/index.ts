@@ -1,0 +1,1 @@
+export { TableFootGroup } from './TableFootGroup'

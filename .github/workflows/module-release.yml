@@ -1,0 +1,142 @@
+name: module release
+
+# The release of a hub module, called by each module's repository on a push to main:
+#   jobs:
+#     release:
+#       uses: cxxi-lab/hub-ui/.github/workflows/module-release.yml@main
+#       secrets: inherit                 # SIGNING_KEY, SSH_PRIVATE_KEY, SSH_HOST, SSH_USER
+# 1. its version, bumped from the commits since its last release (tag v<version>): BREAKING →
+#    major, feat → minor, fix/perf → patch; none of them: nothing released (the repository's first
+#    run tags the version its module.json holds, already published);
+# 2. built and laid out (hub-module build / stage), its native files included;
+# 3. its entry signed: by the update key (an official module), or by the module's own key, which
+#    the update key certified for it (publisher/publisher.json + .sig, uploaded with it);
+# 4. uploaded to the server's releases (files first, entries last: the registry, app:modules:sync,
+#    never lists a version whose files are not there yet).
+on:
+  workflow_call:
+    inputs:
+      prepare:
+        description: a command run before the build (fetching native files…)
+        type: string
+        default: ''
+    secrets:
+      SIGNING_KEY:
+        description: the Ed25519 key signing its entries (PEM)
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+      SSH_HOST:
+        required: true
+      SSH_USER:
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump from the commits
+        id: bump
+        run: |
+          set -e
+          last=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          range=${last:+$last..HEAD}
+          commits=$(git log ${range:-HEAD} --pretty='%B%n---END---' -- . ':(exclude)module.json')
+          if echo "$commits" | grep -qE '(BREAKING CHANGE:|BREAKING:|!:)'; then bump=major
+          elif echo "$commits" | grep -qiE '^feat(\([^)]+\))?:'; then bump=minor
+          elif echo "$commits" | grep -qiE '^(fix|perf)(\([^)]+\))?:'; then bump=patch
+          else bump=''; fi
+          current=$(node -p "require('./module.json').version")
+          # the repository's first run: the version module.json holds is already published (from the
+          # monorepo): tagged, not published again
+          if [ -z "$last" ]; then
+            git tag "v$current" && git push origin "v$current"
+            echo "v$current tagged (already published)"; echo "version=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ -z "$bump" ]; then echo "Nothing to release."; echo "version=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          IFS=. read -r maj min pat <<< "$current"
+          case "$bump" in
+            major) maj=$((maj+1)); min=0; pat=0 ;;
+            minor) min=$((min+1)); pat=0 ;;
+            patch) pat=$((pat+1)) ;;
+          esac
+          version="$maj.$min.$pat"
+          node -e "const f='module.json',m=JSON.parse(require('fs').readFileSync(f,'utf8'));m.version='$version';require('fs').writeFileSync(f,JSON.stringify(m,null,'\t')+'\n')"
+          echo "$current → $version ($bump)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit + tag
+        if: steps.bump.outputs.version != ''
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add module.json
+          git diff --cached --quiet || git commit -m "chore: release v$VERSION [skip ci]"
+          git tag "v$VERSION"
+          git push --atomic origin HEAD "v$VERSION"
+
+      - uses: actions/setup-node@v4
+        if: steps.bump.outputs.version != ''
+        with:
+          node-version: 22
+
+      - name: Install
+        if: steps.bump.outputs.version != ''
+        run: npm install --no-audit --no-fund
+
+      - name: Prepare
+        if: steps.bump.outputs.version != '' && inputs.prepare != ''
+        run: ${{ inputs.prepare }}
+
+      - name: Build + stage
+        if: steps.bump.outputs.version != ''
+        run: |
+          npx hub-module build . --out dist
+          npx hub-module stage stage . --dist dist
+
+      - name: Sign the entry
+        if: steps.bump.outputs.version != ''
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          umask 077
+          printf '%s\n' "$SIGNING_KEY" > "$RUNNER_TEMP/signing-key.pem"
+          for entry in stage/*/*/*/entry.json; do
+            openssl pkeyutl -sign -inkey "$RUNNER_TEMP/signing-key.pem" -rawin -in "$entry" -out "$entry.sig"
+            test -s "$entry.sig"
+            chmod 644 "$entry.sig"
+          done
+          rm -f "$RUNNER_TEMP/signing-key.pem"
+
+      - name: Upload
+        if: steps.bump.outputs.version != ''
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_release
+          chmod 600 ~/.ssh/id_release
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          send() { rsync -e "ssh -i ~/.ssh/id_release" "$@"; }
+          # on the server, the release key is locked to `rrsync -wo` on var/releases: destinations
+          # are relative to it; a restricted module goes under .restricted/modules/
+          if [ -d stage/modules ]; then base=modules; dest="modules/"; else base=restricted; dest=".restricted/modules/"; fi
+          id=$(node -p "require('./module.json').id")
+          # a third party's module: its key's certificate, next to its versions
+          if [ -f publisher/publisher.json ]; then
+            mkdir -p "stage/$base/$id"
+            cp publisher/publisher.json publisher/publisher.json.sig "stage/$base/$id/"
+          fi
+          (cd "stage/$base" && send -rR --exclude 'entry.json*' . "$SSH_USER@$SSH_HOST:$dest")
+          (cd "stage/$base" && send -rR --include '*/' --include 'entry.json*' --exclude '*' . "$SSH_USER@$SSH_HOST:$dest")

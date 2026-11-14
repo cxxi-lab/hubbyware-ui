@@ -1,0 +1,23 @@
+{
+	"name": "@cxxi-lab/hub-module-cli",
+	"version": "0.1.0",
+	"description": "Builds and stages a hub module for publication (hub-module build, hub-module stage).",
+	"license": "MIT",
+	"type": "module",
+	"bin": { "hub-module": "./bin/hub-module.mjs" },
+	"exports": { ".": "./lib/index.mjs" },
+	"files": ["bin", "lib", "LICENSE"],
+	"repository": { "type": "git", "url": "git+https://github.com/cxxi-lab/hub-ui.git" },
+	"publishConfig": { "access": "public" },
+	"dependencies": {
+		"@fortawesome/free-solid-svg-icons": "^7.2.0",
+		"@tailwindcss/vite": "^4.3.0",
+		"@vitejs/plugin-react": "^5.2.0",
+		"tailwindcss": "^4.3.0",
+		"vite": "^7.3.1"
+	},
+	"peerDependencies": {
+		"@cxxi-lab/hub-sdk": "^1.12.0",
+		"@cxxi-lab/hub-ui": "^0.1.0"
+	}
+}
