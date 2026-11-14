@@ -1,6 +1,6 @@
 {
 	"name": "@cxxi-lab/hub-ui",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "hub's design system: React components, design tokens and fonts.",
 	"license": "MIT",
 	"type": "module",
@@ -10,7 +10,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./theme.css": "./styles/theme.css",
-		"./fonts.css": "./styles/fonts.css"
+		"./fonts.css": "./styles/fonts.css",
+		"./package.json": "./package.json"
 	},
 	"files": [
 		"src",
