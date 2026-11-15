@@ -1,6 +1,6 @@
 {
 	"name": "@cxxi-lab/hub-module-cli",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Builds and stages a hub module for publication (hub-module build, hub-module stage).",
 	"license": "MIT",
 	"type": "module",
@@ -32,6 +32,6 @@
 	},
 	"peerDependencies": {
 		"@cxxi-lab/hub-sdk": "^1.12.0",
-		"@cxxi-lab/hub-ui": "^0.1.0"
+		"@cxxi-lab/hub-ui": ">=0.1.0 <1"
 	}
 }
