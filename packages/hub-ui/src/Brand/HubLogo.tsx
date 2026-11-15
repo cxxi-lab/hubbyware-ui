@@ -1,6 +1,6 @@
 import { useId } from 'react'
 
-/** The hub mark (inline: the package needs no SVG loader in its consumers' bundler). */
+/** The hub mark (inline: the package needs no SVG loader in its consumers' bundler), in the accent colour. */
 export function HubLogo({ className }: { className?: string }) {
 	const gradient = `hub-logo-${useId()}`
 	return (
@@ -13,8 +13,9 @@ export function HubLogo({ className }: { className?: string }) {
 			/>
 			<defs>
 				<linearGradient id={gradient} x1="157.5" y1="33.0763" x2="44.7421" y2="148.561" gradientUnits="userSpaceOnUse">
-					<stop offset="0.0509862" stopColor="oklch(77.48% 0.11579287893479469 256.78266516146084)" />
-					<stop offset="1" stopColor="oklch(69.57% 0.16115444413200178 257.18469838826445)" />
+					{/* the accent's (styles/theme.css), the blue without one */}
+					<stop offset="0.0509862" style={{ stopColor: 'var(--color-brand-300, oklch(77.48% 0.1158 256.78))' }} />
+					<stop offset="1" style={{ stopColor: 'var(--color-brand-500, oklch(69.57% 0.1612 257.18))' }} />
 				</linearGradient>
 			</defs>
 		</svg>

@@ -44,6 +44,9 @@
 	--color-primary-400: oklch(73.5% 0.138 257);
 	--color-primary-500: oklch(69.57% 0.1612 257.18);
 	--color-primary-700: oklch(28.69% 0.0455 257.84);
+	/* the logo's gradient (the accent's, bright in both themes) */
+	--color-brand-300: oklch(77.48% 0.1158 256.78);
+	--color-brand-500: oklch(69.57% 0.1612 257.18);
 
 	--color-red-100: oklch(78.26% 0.1224 24.48);
 	--color-red-300: oklch(68% 0.2092 24.48);
@@ -99,12 +102,120 @@
 	--shadow-raised-focus: 0 0 0 1px var(--color-primary-500), 0 8px 16px #0b0f141a;
 }
 
+/*
+ * The accent colours (the app sets data-accent on its root element, and on a hubby's frame through
+ * the SDK; none = the blue above): the primary steps for each, in dark from the colour itself (500)
+ * and the light theme darkened to read on white. `brand` is the logo's gradient: the accent's dark
+ * steps in both themes, the mark stays bright.
+ */
+:root[data-accent="green"] {
+	/* #2ecc71 */
+	--color-primary-300: oklch(82.59% 0.1305 152.33);
+	--color-primary-400: oklch(78.59% 0.1559 152.33);
+	--color-primary-500: oklch(74.59% 0.1812 152.33);
+	--color-primary-700: oklch(28.70% 0.0450 152.33);
+	--color-brand-300: oklch(82.59% 0.1305 152.33);
+	--color-brand-500: oklch(74.59% 0.1812 152.33);
+}
+
+:root[data-accent="teal"] {
+	/* #1abc9c */
+	--color-primary-300: oklch(79.15% 0.0943 174.20);
+	--color-primary-400: oklch(75.15% 0.1127 174.20);
+	--color-primary-500: oklch(71.15% 0.1310 174.20);
+	--color-primary-700: oklch(28.70% 0.0450 174.20);
+	--color-brand-300: oklch(79.15% 0.0943 174.20);
+	--color-brand-500: oklch(71.15% 0.1310 174.20);
+}
+
+:root[data-accent="purple"] {
+	/* #9b59b6 */
+	--color-primary-300: oklch(65.72% 0.1098 315.32);
+	--color-primary-400: oklch(61.72% 0.1311 315.32);
+	--color-primary-500: oklch(57.72% 0.1525 315.32);
+	--color-primary-700: oklch(28.70% 0.0450 315.32);
+	--color-brand-300: oklch(65.72% 0.1098 315.32);
+	--color-brand-500: oklch(57.72% 0.1525 315.32);
+}
+
+:root[data-accent="red"] {
+	/* #e74c3c */
+	--color-primary-300: oklch(71.07% 0.1397 29.44);
+	--color-primary-400: oklch(67.07% 0.1668 29.44);
+	--color-primary-500: oklch(63.07% 0.1940 29.44);
+	--color-primary-700: oklch(28.70% 0.0450 29.44);
+	--color-brand-300: oklch(71.07% 0.1397 29.44);
+	--color-brand-500: oklch(63.07% 0.1940 29.44);
+}
+
+:root[data-accent="orange"] {
+	/* #e67e22 */
+	--color-primary-300: oklch(77.58% 0.1149 55.54);
+	--color-primary-400: oklch(73.58% 0.1373 55.54);
+	--color-primary-500: oklch(69.58% 0.1596 55.54);
+	--color-primary-700: oklch(28.70% 0.0450 55.54);
+	--color-brand-300: oklch(77.58% 0.1149 55.54);
+	--color-brand-500: oklch(69.58% 0.1596 55.54);
+}
+
+:root[data-accent="yellow"] {
+	/* #f1c40f */
+	--color-primary-300: oklch(91.58% 0.1217 91.77);
+	--color-primary-400: oklch(87.58% 0.1453 91.77);
+	--color-primary-500: oklch(83.58% 0.1690 91.77);
+	--color-primary-700: oklch(28.70% 0.0450 91.77);
+	--color-brand-300: oklch(91.58% 0.1217 91.77);
+	--color-brand-500: oklch(83.58% 0.1690 91.77);
+}
+
+:root[data-theme="light"][data-accent="green"] {
+	--color-primary-300: oklch(50.00% 0.1700 152.33);
+	--color-primary-400: oklch(54.00% 0.1700 152.33);
+	--color-primary-500: oklch(58.00% 0.1700 152.33);
+	--color-primary-700: oklch(92.00% 0.0450 152.33);
+}
+
+:root[data-theme="light"][data-accent="teal"] {
+	--color-primary-300: oklch(50.00% 0.1310 174.20);
+	--color-primary-400: oklch(54.00% 0.1310 174.20);
+	--color-primary-500: oklch(58.00% 0.1310 174.20);
+	--color-primary-700: oklch(92.00% 0.0450 174.20);
+}
+
+:root[data-theme="light"][data-accent="purple"] {
+	--color-primary-300: oklch(49.72% 0.1525 315.32);
+	--color-primary-400: oklch(53.72% 0.1525 315.32);
+	--color-primary-500: oklch(57.72% 0.1525 315.32);
+	--color-primary-700: oklch(92.00% 0.0450 315.32);
+}
+
+:root[data-theme="light"][data-accent="red"] {
+	--color-primary-300: oklch(50.00% 0.1700 29.44);
+	--color-primary-400: oklch(54.00% 0.1700 29.44);
+	--color-primary-500: oklch(58.00% 0.1700 29.44);
+	--color-primary-700: oklch(92.00% 0.0450 29.44);
+}
+
+:root[data-theme="light"][data-accent="orange"] {
+	--color-primary-300: oklch(50.00% 0.1596 55.54);
+	--color-primary-400: oklch(54.00% 0.1596 55.54);
+	--color-primary-500: oklch(58.00% 0.1596 55.54);
+	--color-primary-700: oklch(92.00% 0.0450 55.54);
+}
+
+:root[data-theme="light"][data-accent="yellow"] {
+	--color-primary-300: oklch(50.00% 0.1690 91.77);
+	--color-primary-400: oklch(54.00% 0.1690 91.77);
+	--color-primary-500: oklch(58.00% 0.1690 91.77);
+	--color-primary-700: oklch(92.00% 0.0450 91.77);
+}
+
 @utility pretty-scrollbar {
 	@apply scrollbar-thin scrollbar-thumb-steel-700 scrollbar-track-steel-800 overflow-y-auto;
 }
 
 @utility brand-gradient {
-	background: linear-gradient(0deg, var(--color-primary-300), var(--color-primary-500));
+	background: linear-gradient(0deg, var(--color-brand-300), var(--color-brand-500));
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
