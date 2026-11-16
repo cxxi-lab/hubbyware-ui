@@ -15,8 +15,6 @@ name: hubby release
 #    the update key certified for it (publisher/publisher.json + .sig, uploaded with it);
 # 4. uploaded to the server's releases, var/releases/hubbies/ (files first, entries last: the
 #    registry, app:hubbies:sync, never lists a version whose files are not there yet).
-# It replaces module-release.yml (module.json, hub-module, releases/modules/), kept for the hubbies
-# not moved yet until layer 5 of the rename (docs/plan-renommage-hubbyware.md § 5).
 on:
   workflow_call:
     inputs:

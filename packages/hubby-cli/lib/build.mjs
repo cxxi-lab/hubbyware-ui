@@ -11,8 +11,6 @@
 // (@cxxi-lab/hubbyware-sdk/shared.json), one instance of each. An isolated one (index.tsx,
 // hubby.json "isolated": true) runs in its frame: React, the design system and the frame SDK stay
 // bare imports, resolved by the frame's import map.
-// A hubby from before the rename (module.json, @cxxi-lab/hub-sdk, @cxxi-lab/hub-ui) builds too: the
-// former packages' names are shared like the new ones (until layer 5 of the rename).
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { basename, join, resolve } from 'node:path'
@@ -22,33 +20,16 @@ import tailwindcss from '@tailwindcss/vite'
 import * as solid from '@fortawesome/free-solid-svg-icons'
 
 const require = createRequire(import.meta.url)
-/** The SDK's map of the shared libraries (the new SDK's, else the former one's). */
-function sharedMap() {
-	for (const sdk of ['@cxxi-lab/hubbyware-sdk', '@cxxi-lab/hub-sdk']) {
-		try {
-			return JSON.parse(readFileSync(require.resolve(`${sdk}/shared.json`), 'utf8'))
-		}
-		catch { /* the other one */ }
-	}
-	throw new Error('no @cxxi-lab/hubbyware-sdk installed')
-}
-/** Each package by its former name and by its current one (the app shares both). */
-const FORMER = { '@cxxi-lab/hub-sdk': '@cxxi-lab/hubbyware-sdk', '@cxxi-lab/hub-ui': '@cxxi-lab/hubbyware-ui' }
-const SHARED = sharedMap()
-for (const [former, current] of Object.entries(FORMER)) {
-	if (SHARED[former] && !SHARED[current]) SHARED[current] = SHARED[former]
-	if (SHARED[current] && !SHARED[former]) SHARED[former] = SHARED[current]
-}
+const SHARED = JSON.parse(readFileSync(require.resolve('@cxxi-lab/hubbyware-sdk/shared.json'), 'utf8'))
 /** What an isolated hubby's frame provides (its import map). */
-const FRAME_IMPORTS = ['react', 'react/jsx-runtime', 'react-dom/client', '@fortawesome/react-fontawesome',
-	'@cxxi-lab/hubbyware-sdk/frame', '@cxxi-lab/hubbyware-ui', '@cxxi-lab/hub-sdk/frame', '@cxxi-lab/hub-ui']
+const FRAME_IMPORTS = ['react', 'react/jsx-runtime', 'react-dom/client', '@fortawesome/react-fontawesome', '@cxxi-lab/hubbyware-sdk/frame', '@cxxi-lab/hubbyware-ui']
 const ID = /^[a-z][a-z0-9-]{0,38}[a-z0-9]$/
 const VERSION = /^\d+\.\d+\.\d+$/
 
-/** A hubby's hubby.json (module.json before the rename), checked; its id from the file, else its folder's name. */
+/** A hubby's hubby.json, checked; its id from the file, else its folder's name. */
 export function readHubby(dir) {
-	const file = [join(dir, 'hubby.json'), join(dir, 'module.json')].find(existsSync)
-	if (!file) throw new Error(`${dir}: no hubby.json`)
+	const file = join(dir, 'hubby.json')
+	if (!existsSync(file)) throw new Error(`${dir}: no hubby.json`)
 	const info = JSON.parse(readFileSync(file, 'utf8'))
 	const id = info.id ?? basename(resolve(dir))
 	if (!ID.test(id)) throw new Error(`${file}: invalid id "${id}"`)
