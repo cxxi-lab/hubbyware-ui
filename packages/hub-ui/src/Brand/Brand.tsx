@@ -7,7 +7,7 @@ export function Brand({ to, onClick }: BrandProps) {
 	const content = (
 		<>
 			<HubLogo className={styles.icon()} />
-			<span className={styles.text()}>hub</span>
+			<span className={styles.text()}>hubbyware</span>
 		</>
 	)
 

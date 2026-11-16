@@ -10,6 +10,8 @@
 @theme static {
 	--font-display: "Merriweather Sans";
 	--font-accent: "Sofia";
+	/* the brand's word (Brand) */
+	--font-brand: "Fredoka";
 
 	--color-*: initial;
 

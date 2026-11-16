@@ -1,6 +1,6 @@
 import { useId } from 'react'
 
-/** The hub mark (inline: the package needs no SVG loader in its consumers' bundler), in the accent colour. */
+/** The Hubbyware mark (inline: the package needs no SVG loader in its consumers' bundler), in the accent colour. */
 export function HubLogo({ className }: { className?: string }) {
 	const gradient = `hub-logo-${useId()}`
 	return (

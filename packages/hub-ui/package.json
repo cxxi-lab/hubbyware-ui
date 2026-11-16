@@ -1,7 +1,7 @@
 {
 	"name": "@cxxi-lab/hub-ui",
-	"version": "0.3.0",
-	"description": "hub's design system: React components, design tokens and fonts.",
+	"version": "0.4.0",
+	"description": "Hubbyware's design system: React components, design tokens and fonts.",
 	"license": "MIT",
 	"type": "module",
 	"sideEffects": [
