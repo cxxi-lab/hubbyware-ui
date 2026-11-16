@@ -7,7 +7,7 @@ The packages hub's modules are built with:
 | [`@cxxi-lab/hub-ui`](packages/hub-ui) | the design system: React components, design tokens (`theme.css`), fonts (`fonts.css`) |
 | [`@cxxi-lab/hub-module-cli`](packages/hub-module-cli) | `hub-module build` / `hub-module stage`: builds a module on its own and lays it out for publication |
 
-The module SDK (`@cxxi-lab/hub-sdk`) is published from [`cxxi-lab/hub-apps`](https://github.com/cxxi-lab/hub-apps), where it is implemented.
+The module SDK (`@cxxi-lab/hub-sdk`) is published from [`cxxi-lab/hubbyware-client`](https://github.com/cxxi-lab/hubbyware-client), where it is implemented.
 
 ## Publishing
 
