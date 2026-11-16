@@ -1,6 +1,6 @@
 {
 	"name": "@cxxi-lab/hub-module-cli",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Builds and stages a hub module for publication (hub-module build, hub-module stage).",
 	"license": "MIT",
 	"type": "module",
