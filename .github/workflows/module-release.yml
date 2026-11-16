@@ -5,6 +5,8 @@ name: module release
 #     release:
 #       uses: cxxi-lab/hub-ui/.github/workflows/module-release.yml@main
 #       secrets: inherit                 # SIGNING_KEY, SSH_PRIVATE_KEY, SSH_HOST, SSH_USER
+# A repository of several modules (cxxi-lab/hub-modules) calls it once per module, with its folder
+# (`path`) and its tags' prefix (`tag-prefix`, `<id>-v`): only the commits touching its folder count.
 # 1. its version, bumped from the commits since its last release (tag v<version>): BREAKING →
 #    major, feat → minor, fix/perf → patch; none of them: nothing released (the repository's first
 #    run tags the version its module.json holds, already published);
@@ -20,6 +22,14 @@ on:
         description: a command run before the build (fetching native files…)
         type: string
         default: ''
+      path:
+        description: the module's folder in the repository
+        type: string
+        default: '.'
+      tag-prefix:
+        description: its release tags' prefix (`v`; `<id>-v` where a repository holds several modules)
+        type: string
+        default: 'v'
     secrets:
       SIGNING_KEY:
         description: the Ed25519 key signing its entries (PEM)
@@ -37,6 +47,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
+    env:
+      PREFIX: ${{ inputs.tag-prefix }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,11 +61,11 @@ jobs:
         id: bump
         run: |
           set -e
-          last=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          last=$(git tag --list "${PREFIX}*" --sort=-v:refname | grep -E "^${PREFIX}[0-9]+\.[0-9]+\.[0-9]+$" | head -1 || true)
           range=${last:+$last..HEAD}
-          # every commit since the last release (its own commit, a chore:, bumps nothing): a change to
-          # module.json alone (a flag) is released too
-          commits=$(git log ${range:-HEAD} --pretty='%B%n---END---')
+          # every commit since the last release touching its folder (its own commit, a chore:, bumps
+          # nothing): a change to module.json alone (a flag) is released too
+          commits=$(git log ${range:-HEAD} --pretty='%B%n---END---' -- .)
           if echo "$commits" | grep -qE '(BREAKING CHANGE:|BREAKING:|!:)'; then bump=major
           elif echo "$commits" | grep -qiE '^feat(\([^)]+\))?:'; then bump=minor
           elif echo "$commits" | grep -qiE '^(fix|perf)(\([^)]+\))?:'; then bump=patch
@@ -59,8 +74,8 @@ jobs:
           # the repository's first run: the version module.json holds is already published (from the
           # monorepo): tagged, not published again
           if [ -z "$last" ]; then
-            git tag "v$current" && git push origin "v$current"
-            echo "v$current tagged (already published)"; echo "version=" >> "$GITHUB_OUTPUT"; exit 0
+            git tag "$PREFIX$current" && git push origin "$PREFIX$current"
+            echo "$PREFIX$current tagged (already published)"; echo "version=" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if [ -z "$bump" ]; then echo "Nothing to release."; echo "version=" >> "$GITHUB_OUTPUT"; exit 0; fi
           IFS=. read -r maj min pat <<< "$current"
@@ -82,9 +97,18 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add module.json
-          git diff --cached --quiet || git commit -m "chore: release v$VERSION [skip ci]"
-          git tag "v$VERSION"
-          git push --atomic origin HEAD "v$VERSION"
+          # several modules in the repository: its id in the message
+          label=''
+          if [ "${{ inputs.path }}" != '.' ]; then label="$(node -p "require('./module.json').id") "; fi
+          git diff --cached --quiet || git commit -m "chore: release ${label}v$VERSION [skip ci]"
+          # another module of the repository may have released meanwhile: on top of it
+          for i in 1 2 3 4 5; do
+            git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
+            git tag -f "$PREFIX$VERSION"
+            git push --atomic origin "HEAD:${GITHUB_REF_NAME}" "$PREFIX$VERSION" && exit 0
+            sleep 5
+          done
+          exit 1
 
       - uses: actions/setup-node@v4
         if: steps.bump.outputs.version != ''
