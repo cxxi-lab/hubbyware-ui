@@ -130,7 +130,9 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_release
           chmod 600 ~/.ssh/id_release
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          send() { rsync -e "ssh -i ~/.ssh/id_release" "$@"; }
+          # one upload at a time on the server (rrsync locks the directory): another release
+          # uploading at the same moment is waited for
+          send() { for i in 1 2 3 4 5 6 7 8; do rsync -e "ssh -i ~/.ssh/id_release" "$@" && return 0; echo "upload busy, again in 15 s"; sleep 15; done; return 1; }
           # on the server, the release key is locked to `rrsync -wo` on var/releases: destinations
           # are relative to it; a restricted module goes under .restricted/modules/
           if [ -d stage/modules ]; then base=modules; dest="modules/"; else base=restricted; dest=".restricted/modules/"; fi
