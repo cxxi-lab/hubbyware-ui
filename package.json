@@ -1,11 +1,11 @@
 {
-	"name": "hub-ui-workspace",
+	"name": "hubbyware-ui-workspace",
 	"private": true,
 	"workspaces": [
 		"packages/*"
 	],
 	"scripts": {
-		"typecheck": "npm run typecheck -w @cxxi-lab/hub-ui"
+		"typecheck": "npm run typecheck -w @cxxi-lab/hubbyware-ui"
 	},
 	"devDependencies": {
 		"@types/react": "^19.3.0",

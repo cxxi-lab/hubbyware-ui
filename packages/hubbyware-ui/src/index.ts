@@ -1,5 +1,5 @@
 /**
- * @cxxi-lab/hub-ui — hub's design system: the components, the design tokens (theme.css), the fonts
+ * @cxxi-lab/hubbyware-ui — Hubbyware's design system: the components, the design tokens (theme.css), the fonts
  * (fonts.css) and the few helpers the components rely on (the back-button stack…).
  */
 export * from './buttons'

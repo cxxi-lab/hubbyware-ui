@@ -1,11 +1,11 @@
 {
-	"name": "@cxxi-lab/hub-module-cli",
-	"version": "0.2.1",
-	"description": "Builds and stages a hub module for publication (hub-module build, hub-module stage).",
+	"name": "@cxxi-lab/hubby-cli",
+	"version": "0.3.0",
+	"description": "Builds and stages a hubby for publication (hubby build, hubby stage). Formerly @cxxi-lab/hub-module-cli.",
 	"license": "MIT",
 	"type": "module",
 	"bin": {
-		"hub-module": "./bin/hub-module.mjs"
+		"hubby": "./bin/hubby.mjs"
 	},
 	"exports": {
 		".": "./lib/index.mjs",
@@ -18,7 +18,8 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/cxxi-lab/hubbyware-ui.git"
+		"url": "git+https://github.com/cxxi-lab/hubbyware-ui.git",
+		"directory": "packages/hubby-cli"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -31,7 +32,12 @@
 		"vite": "^7.3.1"
 	},
 	"peerDependencies": {
-		"@cxxi-lab/hub-sdk": "^1.12.0 || ^2.0.0",
-		"@cxxi-lab/hub-ui": ">=0.1.0 <1"
+		"@cxxi-lab/hubbyware-sdk": "^3.0.0",
+		"@cxxi-lab/hubbyware-ui": ">=0.5.0 <1"
+	},
+	"peerDependenciesMeta": {
+		"@cxxi-lab/hubbyware-sdk": {
+			"optional": true
+		}
 	}
 }

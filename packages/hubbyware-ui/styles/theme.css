@@ -1,7 +1,7 @@
 /*
- * The design tokens and custom utilities, shared by the app (index.css) and every module
- * (modules/<id>/module.css, through @reference: nothing is emitted twice). The tokens are static:
- * the app emits them all as variables, so a module's utilities find the ones the app itself does
+ * The design tokens and custom utilities, shared by the app (index.css) and every hubby
+ * (hubbies/<id>/hubby.css, through @reference: nothing is emitted twice). The tokens are static:
+ * the app emits them all as variables, so a hubby's utilities find the ones the app itself does
  * not use.
  */
 @import "tailwindcss/theme.css" layer(theme);
@@ -69,7 +69,7 @@
  * The light theme (the app sets data-theme on its root element, and on a hubby's frame through
  * the SDK): the same tokens, redefined. The design is dark-first, so the neutral scale is turned
  * over — steel-900, the page, becomes a light grey, steel-800, the raised surfaces, white, and
- * `white`, the text, near black — and the accents are darkened enough to read on white. The modules
+ * `white`, the text, near black — and the accents are darkened enough to read on white. The hubbies
  * use the same variables: they follow.
  */
 :root[data-theme="light"] {

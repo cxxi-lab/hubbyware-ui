@@ -1,0 +1,172 @@
+name: hubby release
+
+# The release of a hubby, called by each hubby's repository on a push to main:
+#   jobs:
+#     release:
+#       uses: cxxi-lab/hubbyware-ui/.github/workflows/hubby-release.yml@main
+#       secrets: inherit                 # SIGNING_KEY, SSH_PRIVATE_KEY, SSH_HOST, SSH_USER
+# A repository of several hubbies (cxxi-lab/hubbyware-hubbies) calls it once per hubby, with its folder
+# (`path`) and its tags' prefix (`tag-prefix`, `<id>-v`): only the commits touching its folder count.
+# 1. its version, bumped from the commits since its last release (tag v<version>): BREAKING →
+#    major, feat → minor, fix/perf → patch; none of them: nothing released (the repository's first
+#    run tags the version its hubby.json holds, already published);
+# 2. built and laid out (hubby build / stage), its native files included;
+# 3. its entry signed: by the update key (an official hubby), or by the hubby's own key, which
+#    the update key certified for it (publisher/publisher.json + .sig, uploaded with it);
+# 4. uploaded to the server's releases, var/releases/hubbies/ (files first, entries last: the
+#    registry, app:hubbies:sync, never lists a version whose files are not there yet).
+# It replaces module-release.yml (module.json, hub-module, releases/modules/), kept for the hubbies
+# not moved yet until layer 5 of the rename (docs/plan-renommage-hubbyware.md § 5).
+on:
+  workflow_call:
+    inputs:
+      prepare:
+        description: a command run before the build (fetching native files…)
+        type: string
+        default: ''
+      path:
+        description: the hubby's folder in the repository
+        type: string
+        default: '.'
+      tag-prefix:
+        description: its release tags' prefix (`v`; `<id>-v` where a repository holds several hubbies)
+        type: string
+        default: 'v'
+    secrets:
+      SIGNING_KEY:
+        description: the Ed25519 key signing its entries (PEM)
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+      SSH_HOST:
+        required: true
+      SSH_USER:
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
+    env:
+      PREFIX: ${{ inputs.tag-prefix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump from the commits
+        id: bump
+        run: |
+          set -e
+          last=$(git tag --list "${PREFIX}*" --sort=-v:refname | grep -E "^${PREFIX}[0-9]+\.[0-9]+\.[0-9]+$" | head -1 || true)
+          range=${last:+$last..HEAD}
+          # every commit since the last release touching its folder (its own commit, a chore:, bumps
+          # nothing): a change to hubby.json alone (a flag) is released too
+          commits=$(git log ${range:-HEAD} --pretty='%B%n---END---' -- .)
+          if echo "$commits" | grep -qE '(BREAKING CHANGE:|BREAKING:|!:)'; then bump=major
+          elif echo "$commits" | grep -qiE '^feat(\([^)]+\))?:'; then bump=minor
+          elif echo "$commits" | grep -qiE '^(fix|perf)(\([^)]+\))?:'; then bump=patch
+          else bump=''; fi
+          current=$(node -p "require('./hubby.json').version")
+          # the repository's first run: the version hubby.json holds is already published (from the
+          # monorepo): tagged, not published again
+          if [ -z "$last" ]; then
+            git tag "$PREFIX$current" && git push origin "$PREFIX$current"
+            echo "$PREFIX$current tagged (already published)"; echo "version=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ -z "$bump" ]; then echo "Nothing to release."; echo "version=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          IFS=. read -r maj min pat <<< "$current"
+          case "$bump" in
+            major) maj=$((maj+1)); min=0; pat=0 ;;
+            minor) min=$((min+1)); pat=0 ;;
+            patch) pat=$((pat+1)) ;;
+          esac
+          version="$maj.$min.$pat"
+          node -e "const f='hubby.json',m=JSON.parse(require('fs').readFileSync(f,'utf8'));m.version='$version';require('fs').writeFileSync(f,JSON.stringify(m,null,'\t')+'\n')"
+          echo "$current → $version ($bump)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit + tag
+        if: steps.bump.outputs.version != ''
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hubby.json
+          # several hubbies in the repository: its id in the message
+          label=''
+          if [ "${{ inputs.path }}" != '.' ]; then label="$(node -p "require('./hubby.json').id") "; fi
+          git diff --cached --quiet || git commit -m "chore: release ${label}v$VERSION [skip ci]"
+          # another hubby of the repository may have released meanwhile: on top of it
+          for i in 1 2 3 4 5; do
+            git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
+            git tag -f "$PREFIX$VERSION"
+            git push --atomic origin "HEAD:${GITHUB_REF_NAME}" "$PREFIX$VERSION" && exit 0
+            sleep 5
+          done
+          exit 1
+
+      - uses: actions/setup-node@v4
+        if: steps.bump.outputs.version != ''
+        with:
+          node-version: 22
+
+      - name: Install
+        if: steps.bump.outputs.version != ''
+        run: npm install --no-audit --no-fund
+
+      - name: Prepare
+        if: steps.bump.outputs.version != '' && inputs.prepare != ''
+        run: ${{ inputs.prepare }}
+
+      - name: Build + stage
+        if: steps.bump.outputs.version != ''
+        run: |
+          npx hubby build . --out dist
+          npx hubby stage stage . --dist dist
+
+      - name: Sign the entry
+        if: steps.bump.outputs.version != ''
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          umask 077
+          printf '%s\n' "$SIGNING_KEY" > "$RUNNER_TEMP/signing-key.pem"
+          for entry in stage/*/*/*/entry.json; do
+            openssl pkeyutl -sign -inkey "$RUNNER_TEMP/signing-key.pem" -rawin -in "$entry" -out "$entry.sig"
+            test -s "$entry.sig"
+            chmod 644 "$entry.sig"
+          done
+          rm -f "$RUNNER_TEMP/signing-key.pem"
+
+      - name: Upload
+        if: steps.bump.outputs.version != ''
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_release
+          chmod 600 ~/.ssh/id_release
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # one upload at a time on the server (rrsync locks the directory): another release
+          # uploading at the same moment is waited for
+          send() { for i in 1 2 3 4 5 6 7 8; do rsync -e "ssh -i ~/.ssh/id_release" "$@" && return 0; echo "upload busy, again in 15 s"; sleep 15; done; return 1; }
+          # on the server, the release key is locked to `rrsync -wo` on var/releases: destinations
+          # are relative to it; a restricted hubby goes under .restricted/hubbies/
+          if [ -d stage/hubbies ]; then base=hubbies; dest="hubbies/"; else base=restricted; dest=".restricted/hubbies/"; fi
+          id=$(node -p "require('./hubby.json').id")
+          # a third party's hubby: its key's certificate, next to its versions
+          if [ -f publisher/publisher.json ]; then
+            mkdir -p "stage/$base/$id"
+            cp publisher/publisher.json publisher/publisher.json.sig "stage/$base/$id/"
+          fi
+          (cd "stage/$base" && send -rR --exclude 'entry.json*' . "$SSH_USER@$SSH_HOST:$dest")
+          (cd "stage/$base" && send -rR --include '*/' --include 'entry.json*' --exclude '*' . "$SSH_USER@$SSH_HOST:$dest")

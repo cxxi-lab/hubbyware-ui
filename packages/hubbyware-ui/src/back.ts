@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * The phone's back button (Android): it closes what is open on top (a menu, a modal, the module
+ * The phone's back button (Android): it closes what is open on top (a menu, a modal, the hubby
  * drawer…), most recent first; with nothing open, it goes back a page; on the home page, the app
  * goes to the background. The host wires handleBack() to its back button (the app: window.hubBack,
  * called by the Android shell, which does the last part itself when it answers false).
