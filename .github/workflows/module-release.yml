@@ -48,7 +48,9 @@ jobs:
           set -e
           last=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
           range=${last:+$last..HEAD}
-          commits=$(git log ${range:-HEAD} --pretty='%B%n---END---' -- . ':(exclude)module.json')
+          # every commit since the last release (its own commit, a chore:, bumps nothing): a change to
+          # module.json alone (a flag) is released too
+          commits=$(git log ${range:-HEAD} --pretty='%B%n---END---')
           if echo "$commits" | grep -qE '(BREAKING CHANGE:|BREAKING:|!:)'; then bump=major
           elif echo "$commits" | grep -qiE '^feat(\([^)]+\))?:'; then bump=minor
           elif echo "$commits" | grep -qiE '^(fix|perf)(\([^)]+\))?:'; then bump=patch
