@@ -8,7 +8,8 @@
 //                models
 // An in-process hubby (manifest.tsx) runs in the app: the SDK, the design system and the shared
 // libraries are not embedded, they are imported from the app's shared/<name>.js entries
-// (@cxxi-lab/hubbyware-sdk/shared.json), one instance of each. An isolated one (index.tsx,
+// (@cxxi-lab/hubbyware-sdk/shared.json), one instance of each (the SDK's entry: one per hubby,
+// sharedPath). An isolated one (index.tsx,
 // hubby.json "isolated": true) runs in its frame: React, the design system and the frame SDK stay
 // bare imports, resolved by the frame's import map.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -24,6 +25,8 @@ const SHARED = JSON.parse(readFileSync(require.resolve('@cxxi-lab/hubbyware-sdk/
 /** What an isolated hubby's frame provides (its import map). */
 const FRAME_IMPORTS = ['react', 'react/jsx-runtime', 'react-dom/client', '@fortawesome/react-fontawesome', '@cxxi-lab/hubbyware-sdk/frame', '@cxxi-lab/hubbyware-ui']
 const ID = /^[a-z][a-z0-9-]{0,38}[a-z0-9]$/
+/** From this SDK on, each in-process hubby gets its own instance of the SDK's entry. */
+const OWN_SDK = [3, 2]
 const VERSION = /^\d+\.\d+\.\d+$/
 
 /** A hubby's hubby.json, checked; its id from the file, else its folder's name. */
@@ -36,6 +39,18 @@ export function readHubby(dir) {
 	if (!VERSION.test(info.version ?? '')) throw new Error(`${file}: invalid version "${info.version}"`)
 	if (typeof info.sdk !== 'string') throw new Error(`${file}: no sdk range`)
 	return { ...info, id }
+}
+
+/**
+ * Where an in-process hubby imports a shared entry from. The SDK: its own instance from SDK 3.2
+ * on (shared/sdk.js?hubby=<id>: its API calls carry its token, the server knows which hubby makes
+ * each one); a hubby fitting an older app still shares the one instance.
+ */
+function sharedPath(name, info) {
+	if (name !== 'sdk') return `../../shared/${name}.js`
+	const [major, minor] = (/(\d+)\.(\d+)/.exec(info.sdk) ?? []).slice(1).map(Number)
+	const own = major > OWN_SDK[0] || (major === OWN_SDK[0] && minor >= OWN_SDK[1])
+	return own ? `../../shared/sdk.js?hubby=${info.id}` : '../../shared/sdk.js'
 }
 
 /** A Font Awesome solid icon by name (or alias), as [width, height, svg path]. */
@@ -90,7 +105,7 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 				? { external: FRAME_IMPORTS }
 				: {
 					external: Object.keys(SHARED),
-					output: { paths: Object.fromEntries(Object.entries(SHARED).map(([spec, name]) => [spec, `../../shared/${name}.js`])) }
+					output: { paths: Object.fromEntries(Object.entries(SHARED).map(([spec, name]) => [spec, sharedPath(name, info)])) }
 				}
 		}
 	})
