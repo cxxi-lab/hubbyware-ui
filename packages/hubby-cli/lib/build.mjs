@@ -38,6 +38,8 @@ export function readHubby(dir) {
 	if (!ID.test(id)) throw new Error(`${file}: invalid id "${id}"`)
 	if (!VERSION.test(info.version ?? '')) throw new Error(`${file}: invalid version "${info.version}"`)
 	if (typeof info.sdk !== 'string') throw new Error(`${file}: no sdk range`)
+	// a hubby brings no code the host runs natively: the platform's components come with the apps
+	if (info.native !== undefined || info.nativeSources !== undefined) throw new Error(`${file}: \`native\` is no longer allowed: a hubby brings no native file (the VPN tunnel is the platform's)`)
 	return { ...info, id }
 }
 
@@ -111,8 +113,7 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 	})
 	const declared = models(info.id, dir)
 	if (declared) writeFileSync(join(out, 'models.json'), JSON.stringify(declared) + '\n')
-	const { native: _native, nativeSources: _sources, ...described } = info
-	const catalogEntry = { ...described, css: existsSync(join(out, 'style.css')), models: declared !== null, icon: icon(info.id, info.icon) }
+	const catalogEntry = { ...info, css: existsSync(join(out, 'style.css')), models: declared !== null, icon: icon(info.id, info.icon) }
 	writeFileSync(join(out, 'entry.json'), JSON.stringify(catalogEntry) + '\n')
 	return catalogEntry
 }

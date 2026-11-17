@@ -4,13 +4,12 @@
 //   <stage>/restricted/<id>/<version>/<file>   a restricted hubby (`"audience": "restricted"`):
 //                                              handed by the server, with signed file URLs, only to
 //                                              the accounts given it
-// Its native files (hubby.json `native`: { <platform>: { <name>: <path> } }, paths from `root`)
-// are published under native/<platform>/<name>, tagged with their platform: each app downloads
-// only its own. The version's entry.json (the catalogue entry and its files) is signed alone by
+// A hubby brings no native file (`native` is refused at build: the platform's components, e.g. the
+// VPN tunnel, come with the apps, server docs/plan-reseau-vpn.md). The version's entry.json (the catalogue entry and its files) is signed alone by
 // the CI (entry.json.sig): the server's registry serves the catalogue from those signed entries.
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { readHubby } from './build.mjs'
 
 const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('hex')
@@ -29,16 +28,6 @@ export function stageHubby({ dir, dist, stage, root = dir }) {
 		copyFileSync(join(dist, path), join(target, path))
 		return { path, sha256: sha256(join(target, path)) }
 	})
-	for (const [platform, natives] of Object.entries(info.native ?? {})) {
-		for (const [name, from] of Object.entries(natives)) {
-			const source = resolve(root, from)
-			if (!existsSync(source)) throw new Error(`hubby ${info.id}: native file ${from} (${platform}) is missing: build it first`)
-			const path = `native/${platform}/${name}`
-			mkdirSync(dirname(join(target, path)), { recursive: true })
-			copyFileSync(source, join(target, path))
-			files.push({ path, sha256: sha256(join(target, path)), platform })
-		}
-	}
 	const entry = { ...built, files }
 	writeFileSync(join(target, 'entry.json'), JSON.stringify(entry) + '\n')
 	return { entry, target }
