@@ -3,6 +3,8 @@
 //   style.css    its utilities (hubby.css), when it has any
 //   models.json  its collections' models (models/*.json, by collection), when it declares any:
 //                published with it; the server enforces them, the app seals what they say
+//   api.json     its API for the other hubbies (and an agent), when it has one: its api.json,
+//   api.md       checked, and its api.md (how to use it) (client docs/plan-api-hubbies.md)
 //   scrape.json  its scrape rules (hubby.json "scrape": the path of its rules file), when it has
 //                any: published with it; the server validates them and applies them for it
 //                (server docs/plan-scrape.md)
@@ -78,14 +80,67 @@ function scrapeRules(id, dir, path) {
 	return rules
 }
 
-/** What goes next to its code: models.json, scrape.json, entry.json; its catalogue entry. */
+const METHOD = /^[a-z][a-z0-9-]{0,39}(\.[a-z][a-z0-9-]{0,39}){0,4}$/
+const schemaOf = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+// what the app checks of a schema (client app/src/core/hubby/schema.ts): any other keyword refused,
+// none silently ignored
+const SCHEMA_KEYWORDS = new Set(['type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'const', 'anyOf',
+	'minimum', 'maximum', 'minLength', 'maxLength', 'minItems', 'maxItems', 'pattern', 'description', 'title', 'default', 'examples', 'format'])
+
+function checkSchema(schema, at) {
+	if (!schemaOf(schema)) throw new Error(`${at}: a schema is an object`)
+	for (const key of Object.keys(schema)) {
+		if (!SCHEMA_KEYWORDS.has(key)) throw new Error(`${at}: "${key}" is not supported (${[...SCHEMA_KEYWORDS].join(', ')})`)
+	}
+	for (const [name, sub] of Object.entries(schema.properties ?? {})) checkSchema(sub, `${at}.properties.${name}`)
+	if (schemaOf(schema.additionalProperties)) checkSchema(schema.additionalProperties, `${at}.additionalProperties`)
+	if (schema.items !== undefined) checkSchema(schema.items, `${at}.items`)
+	for (const [i, sub] of (schema.anyOf ?? []).entries()) checkSchema(sub, `${at}.anyOf[${i}]`)
+	if (schema.pattern !== undefined) {
+		try { new RegExp(schema.pattern, 'u') }
+		catch { throw new Error(`${at}: its pattern is not a valid regular expression`) }
+	}
+}
+
+/**
+ * Its API (api.json: { methods: { "<name>": { description, input, output, effect, interface? } } },
+ * the schemas JSON Schema), checked; null: none. Its methods run in its own frame (its `api` in
+ * defineHubby); the host validates what goes in and out against these schemas.
+ */
+function hubbyApi(id, dir) {
+	const file = join(dir, 'api.json')
+	if (!existsSync(file)) return null
+	let api
+	try { api = JSON.parse(readFileSync(file, 'utf8')) }
+	catch (err) { throw new Error(`hubby ${id}: api.json is not valid JSON (${err.message})`) }
+	const methods = api?.methods
+	if (!schemaOf(methods) || Object.keys(methods).length === 0) throw new Error(`hubby ${id}: api.json has no "methods"`)
+	for (const [name, m] of Object.entries(methods)) {
+		const at = `hubby ${id}: api.json, ${name}`
+		if (!METHOD.test(name)) throw new Error(`${at}: a method's name is words (a-z, 0-9, -) joined by dots`)
+		if (!schemaOf(m) || typeof m.description !== 'string' || m.description.trim() === '') throw new Error(`${at}: a description is required`)
+		if (!schemaOf(m.input) || !schemaOf(m.output)) throw new Error(`${at}: its input and output are JSON Schemas`)
+		checkSchema(m.input, `${at}, input`)
+		checkSchema(m.output, `${at}, output`)
+		if (m.effect !== 'read' && m.effect !== 'write') throw new Error(`${at}: its effect is "read" or "write"`)
+		if (m.interface !== undefined && (typeof m.interface !== 'string' || !METHOD.test(m.interface))) throw new Error(`${at}: its interface is a method's name`)
+		const unknown = Object.keys(m).filter(k => !['description', 'input', 'output', 'effect', 'interface'].includes(k))
+		if (unknown.length) throw new Error(`${at}: unknown key ${unknown.join(', ')}`)
+	}
+	return api
+}
+
+/** What goes next to its code: models.json, scrape.json, api.json, entry.json; its catalogue entry. */
 function writeExtras(dir, out) {
 	const info = readHubby(dir)
 	const declared = models(info.id, dir)
 	if (declared) writeFileSync(join(out, 'models.json'), JSON.stringify(declared) + '\n')
 	const rules = scrapeRules(info.id, dir, info.scrape)
 	if (rules) writeFileSync(join(out, 'scrape.json'), JSON.stringify(rules) + '\n')
-	const catalogEntry = { ...info, css: existsSync(join(out, 'style.css')), models: declared !== null, scrape: rules !== null, icon: icon(info.id, info.icon) }
+	const api = hubbyApi(info.id, dir)
+	if (api) writeFileSync(join(out, 'api.json'), JSON.stringify(api) + '\n')
+	if (api && existsSync(join(dir, 'api.md'))) writeFileSync(join(out, 'api.md'), readFileSync(join(dir, 'api.md')))
+	const catalogEntry = { ...info, css: existsSync(join(out, 'style.css')), models: declared !== null, scrape: rules !== null, api: api !== null, icon: icon(info.id, info.icon) }
 	writeFileSync(join(out, 'entry.json'), JSON.stringify(catalogEntry) + '\n')
 	return catalogEntry
 }
