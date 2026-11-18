@@ -78,11 +78,25 @@ function scrapeRules(id, dir, path) {
 	return rules
 }
 
+/** What goes next to its code: models.json, scrape.json, entry.json; its catalogue entry. */
+function writeExtras(dir, out) {
+	const info = readHubby(dir)
+	const declared = models(info.id, dir)
+	if (declared) writeFileSync(join(out, 'models.json'), JSON.stringify(declared) + '\n')
+	const rules = scrapeRules(info.id, dir, info.scrape)
+	if (rules) writeFileSync(join(out, 'scrape.json'), JSON.stringify(rules) + '\n')
+	const catalogEntry = { ...info, css: existsSync(join(out, 'style.css')), models: declared !== null, scrape: rules !== null, icon: icon(info.id, info.icon) }
+	writeFileSync(join(out, 'entry.json'), JSON.stringify(catalogEntry) + '\n')
+	return catalogEntry
+}
+
 /**
  * Builds the hubby in `dir` into `out`; returns its catalogue entry. `alias`: extra resolve
- * aliases (the monorepo's).
+ * aliases (the monorepo's). `watch`: builds again on each change of its sources (its hubby.json
+ * and models too), `onBuilt(entry)` after each build; resolves with the first build's entry and
+ * keeps watching (hubby dev).
  */
-export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
+export async function buildHubby({ dir, out, alias = {}, quiet = false, watch = false, onBuilt }) {
 	dir = resolve(dir)
 	out = resolve(out)
 	const info = readHubby(dir)
@@ -91,12 +105,36 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 	const candidates = ['index.tsx', 'manifest.tsx']
 	const entry = candidates.map(name => join(dir, name)).find(existsSync)
 	if (!entry) throw new Error(`hubby ${info.id}: no ${candidates.join(' or ')}`)
+	let first
+	const done = new Promise((resolve, reject) => { first = { resolve, reject } })
+	let built = null
+	const extras = {
+		name: 'hubby-extras',
+		buildStart() {
+			// what isn't imported but makes the hubby: watched too
+			for (const file of ['hubby.json', ...(existsSync(join(dir, 'models')) ? readdirSync(join(dir, 'models')).filter(n => n.endsWith('.json')).map(n => join('models', n)) : [])]) {
+				this.addWatchFile(join(dir, file))
+			}
+			if (typeof info.scrape === 'string' && existsSync(join(dir, info.scrape))) this.addWatchFile(join(dir, info.scrape))
+		},
+		writeBundle() {
+			built = writeExtras(dir, out)
+			onBuilt?.(built)
+			first.resolve(built)
+		},
+		buildEnd(error) {
+			if (error) {
+				if (!watch) first.reject(error)
+				else console.error(`hubby ${info.id}: build failed`, error.message)
+			}
+		}
+	}
 	await build({
 		configFile: false,
 		root: dir,
 		logLevel: quiet ? 'silent' : 'warn',
 		publicDir: false,
-		plugins: [react(), tailwindcss()],
+		plugins: [react(), tailwindcss(), extras],
 		resolve: { alias },
 		define: { 'process.env.NODE_ENV': JSON.stringify('production') },
 		build: {
@@ -104,14 +142,9 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 			emptyOutDir: true,
 			copyPublicDir: false,
 			lib: { entry, formats: ['es'], fileName: () => 'index.js', cssFileName: 'style' },
-			rollupOptions: { external: FRAME_IMPORTS }
+			rollupOptions: { external: FRAME_IMPORTS },
+			watch: watch ? {} : null
 		}
 	})
-	const declared = models(info.id, dir)
-	if (declared) writeFileSync(join(out, 'models.json'), JSON.stringify(declared) + '\n')
-	const rules = scrapeRules(info.id, dir, info.scrape)
-	if (rules) writeFileSync(join(out, 'scrape.json'), JSON.stringify(rules) + '\n')
-	const catalogEntry = { ...info, css: existsSync(join(out, 'style.css')), models: declared !== null, scrape: rules !== null, icon: icon(info.id, info.icon) }
-	writeFileSync(join(out, 'entry.json'), JSON.stringify(catalogEntry) + '\n')
-	return catalogEntry
+	return done
 }
