@@ -43,3 +43,20 @@ one. The schemas use a subset of JSON Schema, the one the app checks: `type`, `p
 `required`, `additionalProperties`, `items`, `enum`, `const`, `anyOf`, `minimum`, `maximum`,
 `minLength`, `maxLength`, `minItems`, `maxItems`, `pattern` (and `description`, `title`,
 `default`, `examples`, `format`, not checked). Any other keyword fails the build.
+
+## Its AI models (hubby.json "ai")
+
+A hubby can use AI models that run on the user's device (client docs/plan-ia-moteur.md): it
+declares them in its `hubby.json`, by name, each with its variants by size (the first one the device
+can run is used: list them larger first). Every file is pinned — a Hugging Face repo at a commit,
+the file's sha256 and size — so what a device downloads is checked:
+
+```sh
+hubby ai pin chat bartowski/Qwen_Qwen3-1.7B-GGUF Qwen_Qwen3-1.7B-Q4_K_M.gguf --family text --vram 2000 --ram 3000
+hubby ai pin chat bartowski/Qwen_Qwen3-0.6B-GGUF Qwen_Qwen3-0.6B-Q8_0.gguf --ram 1500
+```
+
+`pin` resolves the ref (`<repo>@<branch|tag|commit>`, default `main`) to its commit and reads each
+file's sha256 and size from Hugging Face; a variant of the same repo and files is replaced. `--vram`
+and `--ram` (MiB) are what it needs to run well (on the GPU) and at all (on the CPU); the device
+warns, or refuses, accordingly. The build refuses a model not pinned this way.

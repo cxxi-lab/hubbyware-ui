@@ -22,6 +22,7 @@ import { build } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import * as solid from '@fortawesome/free-solid-svg-icons'
+import { checkAi } from './ai.mjs'
 
 const require = createRequire(import.meta.url)
 /** What an isolated hubby's frame provides (its import map). */
@@ -40,6 +41,8 @@ export function readHubby(dir) {
 	if (typeof info.sdk !== 'string') throw new Error(`${file}: no sdk range`)
 	// a hubby brings no code the host runs natively: the platform's components come with the apps
 	if (info.native !== undefined || info.nativeSources !== undefined) throw new Error(`${file}: \`native\` is no longer allowed: a hubby brings no native file (the VPN tunnel is the platform's)`)
+	// its AI models (client docs/plan-ia-moteur.md § 5): each file pinned, or a device refuses it
+	checkAi(id, info.ai)
 	return { ...info, id }
 }
 

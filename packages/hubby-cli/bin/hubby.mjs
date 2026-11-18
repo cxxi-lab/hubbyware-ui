@@ -5,10 +5,13 @@
 // hubby dev [dir] [--out <modules dir>]                 builds it again on each change, into the
 //                                                            development app's hubbies (its frame
 //                                                            reloads): see README
+// hubby ai pin <model> <repo>[@<ref>] <file>... [--family text|image|voice] [--vram MiB] [--ram MiB]
+//                                                            pins a variant of an AI model in its
+//                                                            hubby.json (commit, sha256, size)
 import { parseArgs } from 'node:util'
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { buildHubby, readHubby, stageHubby } from '../lib/index.mjs'
+import { buildHubby, pinModel, readHubby, stageHubby } from '../lib/index.mjs'
 
 /**
  * The development desktop's hubbies folder (repos/client/platforms/desktop/out/renderer/modules,
@@ -24,7 +27,7 @@ function devModules(dir) {
 
 const { positionals, values } = parseArgs({
 	allowPositionals: true,
-	options: { out: { type: 'string' }, dist: { type: 'string' }, root: { type: 'string' } }
+	options: { out: { type: 'string' }, dist: { type: 'string' }, root: { type: 'string' }, family: { type: 'string' }, vram: { type: 'string' }, ram: { type: 'string' }, description: { type: 'string' }, dir: { type: 'string' } }
 })
 const [command, ...args] = positionals
 
@@ -51,7 +54,13 @@ else if (command === 'dev') {
 	})
 	console.log('watching its sources (Ctrl+C to stop)')
 }
+else if (command === 'ai' && args[0] === 'pin') {
+	const [, name, ref, ...files] = args
+	if (!name || !ref || !files.length) throw new Error('usage: hubby ai pin <model> <repo>[@<ref>] <file>... [--family text|image|voice] [--vram MiB] [--ram MiB] [--dir <hubby>]')
+	const pinned = await pinModel({ dir: resolve(values.dir ?? '.'), name, ref, files, family: values.family, vram: values.vram, ram: values.ram, description: values.description })
+	console.log(`${name}: ${pinned.repo}@${pinned.commit.slice(0, 8)}, ${pinned.files.map(f => `${f.path} (${(f.size / 2 ** 30).toFixed(2)} GiB)`).join(', ')}`)
+}
 else {
-	console.error('usage: hubby build [dir] [--out dist] | hubby stage <stage dir> [dir] [--dist dist] [--root dir] | hubby dev [dir] [--out modules dir]')
+	console.error('usage: hubby build [dir] [--out dist] | hubby stage <stage dir> [dir] [--dist dist] [--root dir] | hubby dev [dir] [--out modules dir] | hubby ai pin <model> <repo>[@<ref>] <file>...')
 	process.exit(1)
 }
