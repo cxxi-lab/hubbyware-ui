@@ -1,6 +1,6 @@
 {
 	"name": "@cxxi-lab/hubby-cli",
-	"version": "0.8.0",
+	"version": "0.9.0",
 	"description": "Builds and stages a hubby for publication (hubby build, hubby stage). Formerly @cxxi-lab/hub-module-cli.",
 	"license": "MIT",
 	"type": "module",
