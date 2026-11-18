@@ -38,7 +38,9 @@ describes them in `api.json`, next to its `hubby.json`:
 }
 ```
 
-The build checks it and publishes it, with `api.md` (how to use it, for an AI agent) when there is
+Its `effect` says what it does, for an AI agent using it (client docs/plan-ia-agent.md): `read`
+(free), `write` (changes the user's data: confirmed), `outward` (reaches outside Hubbyware or can't be
+undone, a mail sent: always confirmed). The build checks it and publishes it, with `api.md` (how to use it, for an AI agent) when there is
 one. The schemas use a subset of JSON Schema, the one the app checks: `type`, `properties`,
 `required`, `additionalProperties`, `items`, `enum`, `const`, `anyOf`, `minimum`, `maximum`,
 `minLength`, `maxLength`, `minItems`, `maxItems`, `pattern` (and `description`, `title`,

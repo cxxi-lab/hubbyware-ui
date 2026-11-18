@@ -125,7 +125,9 @@ function hubbyApi(id, dir) {
 		if (!schemaOf(m.input) || !schemaOf(m.output)) throw new Error(`${at}: its input and output are JSON Schemas`)
 		checkSchema(m.input, `${at}, input`)
 		checkSchema(m.output, `${at}, output`)
-		if (m.effect !== 'read' && m.effect !== 'write') throw new Error(`${at}: its effect is "read" or "write"`)
+		// what it does, for an AI agent's confirmations (client docs/plan-ia-agent.md D3): reads, changes the
+		// user's data, or reaches outside Hubbyware / can't be undone (a mail sent): always confirmed
+		if (!['read', 'write', 'outward'].includes(m.effect)) throw new Error(`${at}: its effect is "read", "write" or "outward"`)
 		if (m.interface !== undefined && (typeof m.interface !== 'string' || !METHOD.test(m.interface))) throw new Error(`${at}: its interface is a method's name`)
 		const unknown = Object.keys(m).filter(k => !['description', 'input', 'output', 'effect', 'interface'].includes(k))
 		if (unknown.length) throw new Error(`${at}: unknown key ${unknown.join(', ')}`)
