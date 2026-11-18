@@ -1,5 +1,5 @@
 // Builds one hubby, on its own (its repository, or a folder of the monorepo), into <out>:
-//   index.js     the hubby: its manifest as an export (in-process), or its definition (isolated)
+//   index.js     the hubby: its definition, run in its frame
 //   style.css    its utilities (hubby.css), when it has any
 //   models.json  its collections' models (models/*.json, by collection), when it declares any:
 //                published with it; the server enforces them, the app seals what they say
@@ -9,13 +9,10 @@
 //   entry.json   its catalogue entry, without its files (hubby stage adds them): hubby.json
 //                (id, version, sdk range, label, description, scopes…), its icon's svg path, css,
 //                models
-// An in-process hubby (manifest.tsx) runs in the app: the SDK, the design system and the shared
-// libraries are not embedded, they are imported from the app's shared/<name>.js entries
-// (@cxxi-lab/hubbyware-sdk/shared.json), one instance of each (the SDK's entry: one per hubby,
-// sharedPath). An isolated one (index.tsx,
-// hubby.json "isolated": true) runs in its frame: React, react-router, the design system and the
-// SDK (its common API, client docs/plan-isolation.md § 2) stay bare imports, resolved by the
-// frame's import map.
+// Every hubby runs isolated (client docs/plan-isolation.md; hubby.json "isolated": true): in its
+// frame, React, react-router, the design system and the SDK (its common API) stay bare imports,
+// resolved by the frame's import map. Its entry: index.tsx, else manifest.tsx (its definition). A
+// hubby running in the app is no longer built (the apps don't load one any more).
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { basename, join, resolve } from 'node:path'
@@ -25,12 +22,9 @@ import tailwindcss from '@tailwindcss/vite'
 import * as solid from '@fortawesome/free-solid-svg-icons'
 
 const require = createRequire(import.meta.url)
-const SHARED = JSON.parse(readFileSync(require.resolve('@cxxi-lab/hubbyware-sdk/shared.json'), 'utf8'))
 /** What an isolated hubby's frame provides (its import map). */
 const FRAME_IMPORTS = ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client', 'react-router', '@fortawesome/react-fontawesome', '@cxxi-lab/hubbyware-sdk', '@cxxi-lab/hubbyware-sdk/frame', '@cxxi-lab/hubbyware-ui']
 const ID = /^[a-z][a-z0-9-]{0,38}[a-z0-9]$/
-/** From this SDK on, each in-process hubby gets its own instance of the SDK's entry. */
-const OWN_SDK = [3, 2]
 const VERSION = /^\d+\.\d+\.\d+$/
 
 /** A hubby's hubby.json, checked; its id from the file, else its folder's name. */
@@ -45,18 +39,6 @@ export function readHubby(dir) {
 	// a hubby brings no code the host runs natively: the platform's components come with the apps
 	if (info.native !== undefined || info.nativeSources !== undefined) throw new Error(`${file}: \`native\` is no longer allowed: a hubby brings no native file (the VPN tunnel is the platform's)`)
 	return { ...info, id }
-}
-
-/**
- * Where an in-process hubby imports a shared entry from. The SDK: its own instance from SDK 3.2
- * on (shared/sdk.js?hubby=<id>: its API calls carry its token, the server knows which hubby makes
- * each one); a hubby fitting an older app still shares the one instance.
- */
-function sharedPath(name, info) {
-	if (name !== 'sdk') return `../../shared/${name}.js`
-	const [major, minor] = (/(\d+)\.(\d+)/.exec(info.sdk) ?? []).slice(1).map(Number)
-	const own = major > OWN_SDK[0] || (major === OWN_SDK[0] && minor >= OWN_SDK[1])
-	return own ? `../../shared/sdk.js?hubby=${info.id}` : '../../shared/sdk.js'
 }
 
 /** A Font Awesome solid icon by name (or alias), as [width, height, svg path]. */
@@ -104,10 +86,9 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 	dir = resolve(dir)
 	out = resolve(out)
 	const info = readHubby(dir)
-	const isolated = info.isolated === true
-	// isolated: its index.tsx, else its manifest.tsx (the same definition runs in its frame:
-	// client docs/plan-isolation.md § 2, a hubby switching by its `isolated` flag alone)
-	const candidates = isolated ? ['index.tsx', 'manifest.tsx'] : ['manifest.tsx']
+	if (info.isolated !== true) throw new Error(`hubby ${info.id}: every hubby runs isolated (hubby.json "isolated": true; client docs/plan-isolation.md)`)
+	// its index.tsx, else its manifest.tsx (its definition)
+	const candidates = ['index.tsx', 'manifest.tsx']
 	const entry = candidates.map(name => join(dir, name)).find(existsSync)
 	if (!entry) throw new Error(`hubby ${info.id}: no ${candidates.join(' or ')}`)
 	await build({
@@ -123,12 +104,7 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 			emptyOutDir: true,
 			copyPublicDir: false,
 			lib: { entry, formats: ['es'], fileName: () => 'index.js', cssFileName: 'style' },
-			rollupOptions: isolated
-				? { external: FRAME_IMPORTS }
-				: {
-					external: Object.keys(SHARED),
-					output: { paths: Object.fromEntries(Object.entries(SHARED).map(([spec, name]) => [spec, sharedPath(name, info)])) }
-				}
+			rollupOptions: { external: FRAME_IMPORTS }
 		}
 	})
 	const declared = models(info.id, dir)
