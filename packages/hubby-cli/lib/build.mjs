@@ -3,6 +3,9 @@
 //   style.css    its utilities (hubby.css), when it has any
 //   models.json  its collections' models (models/*.json, by collection), when it declares any:
 //                published with it; the server enforces them, the app seals what they say
+//   scrape.json  its scrape rules (hubby.json "scrape": the path of its rules file), when it has
+//                any: published with it; the server validates them and applies them for it
+//                (server docs/plan-scrape.md)
 //   entry.json   its catalogue entry, without its files (hubby stage adds them): hubby.json
 //                (id, version, sdk range, label, description, scopes…), its icon's svg path, css,
 //                models
@@ -79,6 +82,19 @@ function models(id, dir) {
 	return Object.keys(all).length ? all : null
 }
 
+/** Its scrape rules (hubby.json `scrape`: a JSON file of its folder), as published; null: none. */
+function scrapeRules(id, dir, path) {
+	if (path === undefined) return null
+	if (typeof path !== 'string' || path === '' || path.startsWith('/') || path.split(/[\\/]/).includes('..')) throw new Error(`hubby ${id}: hubby.json "scrape" must be a path inside the hubby`)
+	const file = join(dir, path)
+	if (!existsSync(file)) throw new Error(`hubby ${id}: no ${path} (hubby.json "scrape")`)
+	let rules
+	try { rules = JSON.parse(readFileSync(file, 'utf8')) }
+	catch (err) { throw new Error(`hubby ${id}: ${path} is not valid JSON (${err.message})`) }
+	if (!rules || typeof rules !== 'object' || !Array.isArray(rules.sites)) throw new Error(`hubby ${id}: ${path} has no "sites" (scrape rules)`)
+	return rules
+}
+
 /**
  * Builds the hubby in `dir` into `out`; returns its catalogue entry. `alias`: extra resolve
  * aliases (the monorepo's).
@@ -113,7 +129,9 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 	})
 	const declared = models(info.id, dir)
 	if (declared) writeFileSync(join(out, 'models.json'), JSON.stringify(declared) + '\n')
-	const catalogEntry = { ...info, css: existsSync(join(out, 'style.css')), models: declared !== null, icon: icon(info.id, info.icon) }
+	const rules = scrapeRules(info.id, dir, info.scrape)
+	if (rules) writeFileSync(join(out, 'scrape.json'), JSON.stringify(rules) + '\n')
+	const catalogEntry = { ...info, css: existsSync(join(out, 'style.css')), models: declared !== null, scrape: rules !== null, icon: icon(info.id, info.icon) }
 	writeFileSync(join(out, 'entry.json'), JSON.stringify(catalogEntry) + '\n')
 	return catalogEntry
 }
