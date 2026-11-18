@@ -1,6 +1,6 @@
 // The Markdown component on what matters (npm test): safe by default, GFM, code, a stream mid-block.
 import { renderToStaticMarkup } from 'react-dom/server'
-import { Markdown } from '../src/markdown/Markdown'
+import { MarkdownView as Markdown } from '../src/markdown/MarkdownView'
 const cases: Record<string, [string, (html: string) => boolean]> = {
 	'raw html stays text': ['Hello <script>alert(1)</script> <b>bold</b>', h => !h.includes('<script>') && h.includes('&lt;script&gt;') && !h.includes('<b>')],
 	'javascript: link dropped': ['[click](javascript:alert(1))', h => !h.includes('javascript:')],

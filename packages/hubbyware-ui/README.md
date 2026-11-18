@@ -12,5 +12,6 @@ back-office, the showcase, the docs): CommonMark and GitHub's extensions (tables
 strikethrough, autolinks), code blocks with a copy button, styled with the design tokens. Safe by
 default — the text may come from a model or a user: raw HTML is shown as text, never rendered;
 `javascript:` links are dropped and links open outside; images are shown as links unless `images`.
-It re-renders on each chunk of a stream (an unclosed code block already shows as code).
+It re-renders on each chunk of a stream (an unclosed code block already shows as code). Its parser
+(~100 kB gzipped) loads on first use: an app or a frame that never shows Markdown never loads it.
 `npm test` checks all this.
