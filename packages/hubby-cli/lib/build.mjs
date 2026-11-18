@@ -13,8 +13,9 @@
 // libraries are not embedded, they are imported from the app's shared/<name>.js entries
 // (@cxxi-lab/hubbyware-sdk/shared.json), one instance of each (the SDK's entry: one per hubby,
 // sharedPath). An isolated one (index.tsx,
-// hubby.json "isolated": true) runs in its frame: React, the design system and the frame SDK stay
-// bare imports, resolved by the frame's import map.
+// hubby.json "isolated": true) runs in its frame: React, react-router, the design system and the
+// SDK (its common API, client docs/plan-isolation.md § 2) stay bare imports, resolved by the
+// frame's import map.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { basename, join, resolve } from 'node:path'
@@ -26,7 +27,7 @@ import * as solid from '@fortawesome/free-solid-svg-icons'
 const require = createRequire(import.meta.url)
 const SHARED = JSON.parse(readFileSync(require.resolve('@cxxi-lab/hubbyware-sdk/shared.json'), 'utf8'))
 /** What an isolated hubby's frame provides (its import map). */
-const FRAME_IMPORTS = ['react', 'react/jsx-runtime', 'react-dom/client', '@fortawesome/react-fontawesome', '@cxxi-lab/hubbyware-sdk/frame', '@cxxi-lab/hubbyware-ui']
+const FRAME_IMPORTS = ['react', 'react/jsx-runtime', 'react-dom/client', 'react-router', '@fortawesome/react-fontawesome', '@cxxi-lab/hubbyware-sdk', '@cxxi-lab/hubbyware-sdk/frame', '@cxxi-lab/hubbyware-ui']
 const ID = /^[a-z][a-z0-9-]{0,38}[a-z0-9]$/
 /** From this SDK on, each in-process hubby gets its own instance of the SDK's entry. */
 const OWN_SDK = [3, 2]
@@ -104,8 +105,11 @@ export async function buildHubby({ dir, out, alias = {}, quiet = false }) {
 	out = resolve(out)
 	const info = readHubby(dir)
 	const isolated = info.isolated === true
-	const entry = join(dir, isolated ? 'index.tsx' : 'manifest.tsx')
-	if (!existsSync(entry)) throw new Error(`hubby ${info.id}: no ${isolated ? 'index.tsx' : 'manifest.tsx'}`)
+	// isolated: its index.tsx, else its manifest.tsx (the same definition runs in its frame:
+	// client docs/plan-isolation.md § 2, a hubby switching by its `isolated` flag alone)
+	const candidates = isolated ? ['index.tsx', 'manifest.tsx'] : ['manifest.tsx']
+	const entry = candidates.map(name => join(dir, name)).find(existsSync)
+	if (!entry) throw new Error(`hubby ${info.id}: no ${candidates.join(' or ')}`)
 	await build({
 		configFile: false,
 		root: dir,
