@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const NAME = /^[a-z][a-z0-9-]{0,39}$/
-const FAMILIES = ['text', 'image', 'voice']
+const FAMILIES = ['text', 'image', 'voice', 'embed']
 const REPO = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/
 const COMMIT = /^[0-9a-f]{40}$/
 const SHA256 = /^[0-9a-f]{64}$/

@@ -5,7 +5,7 @@
 // hubby dev [dir] [--out <modules dir>]                 builds it again on each change, into the
 //                                                            development app's hubbies (its frame
 //                                                            reloads): see README
-// hubby ai pin <model> <repo>[@<ref>] <file>... [--family text|image|voice] [--vram MiB] [--ram MiB]
+// hubby ai pin <model> <repo>[@<ref>] <file>... [--family text|image|voice|embed] [--vram MiB] [--ram MiB]
 //                                                            pins a variant of an AI model in its
 //                                                            hubby.json (commit, sha256, size)
 import { parseArgs } from 'node:util'
@@ -56,7 +56,7 @@ else if (command === 'dev') {
 }
 else if (command === 'ai' && args[0] === 'pin') {
 	const [, name, ref, ...files] = args
-	if (!name || !ref || !files.length) throw new Error('usage: hubby ai pin <model> <repo>[@<ref>] <file>... [--family text|image|voice] [--vram MiB] [--ram MiB] [--dir <hubby>]')
+	if (!name || !ref || !files.length) throw new Error('usage: hubby ai pin <model> <repo>[@<ref>] <file>... [--family text|image|voice|embed] [--vram MiB] [--ram MiB] [--dir <hubby>]')
 	const pinned = await pinModel({ dir: resolve(values.dir ?? '.'), name, ref, files, family: values.family, vram: values.vram, ram: values.ram, description: values.description })
 	console.log(`${name}: ${pinned.repo}@${pinned.commit.slice(0, 8)}, ${pinned.files.map(f => `${f.path} (${(f.size / 2 ** 30).toFixed(2)} GiB)`).join(', ')}`)
 }
